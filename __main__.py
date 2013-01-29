@@ -5,4 +5,4 @@ def test(profiles):
 		pass
 	yield {'head': '42'}
 
-Profiles().map(test).show()
+Profiles().map(test).show('text')
