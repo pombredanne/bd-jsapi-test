@@ -1,7 +1,8 @@
 from bitdeli.widgets import set_theme, Description, Title
 from bitdeli.chain import Profiles
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
+from urlparse import urlsplit, urlunsplit
 
 TIMELINE_DAYS = 30 
 TFORMAT = '%Y-%m-%d'
@@ -9,6 +10,43 @@ TFORMAT = '%Y-%m-%d'
 text = {'window': TIMELINE_DAYS}
 
 
+def referrers(profiles):
+    
+    def domains(pageviews):
+        referrers = defaultdict(Counter)
+        for pageview in pageviews:
+            page_info = pageview[3].get("$page_info")
+            if not page_info or "referrer" not in page_info:
+                continue
+            url = urlsplit(page_info["referrer"])
+            clean = urlunsplit(("", url.netloc, url.path,
+                                url.query, "")).strip("/")
+            referrers[url.netloc][clean] += 1
+        return referrers
+    
+    def top_urls(referrers):
+        for domain, urls in referrers.iteritems():
+            top_page = urls.most_common(1)[0]
+            yield {'Domain': domain,
+                   'Domain Visits': len(list(urls.elements())),
+                   'Top Page': top_page[0],
+                   'Visits': top_page[1]}
+    
+    referrers = defaultdict(Counter)
+    for profile in profiles:
+        if '$pageview' not in profile:
+            continue
+        for domain, urls in domains(profile['$pageview']).iteritems():
+            referrers[domain].update(urls)
+    
+    yield {'type': 'table',
+           'label': 'Top Referrers',
+           'data': sorted(list(top_urls(referrers)),
+                          key=lambda r: -r['Domain Visits'])[:20],
+           'size': (12, 4),
+           'csv_export': True}
+
+        
 def activity(profiles):
     limit = datetime.now() - timedelta(days=TIMELINE_DAYS)
     limit_str = limit.strftime(TFORMAT)
@@ -56,6 +94,9 @@ def activity(profiles):
                     {'label': 'Unique Visitors',
                      'data': list(timeline(uniques))}],
            'size': (12, 4)}
-     
 
+
+Profiles().map(referrers).show()
+    
 Profiles().map(activity).show()
+
