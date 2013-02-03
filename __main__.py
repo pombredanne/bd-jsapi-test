@@ -4,14 +4,21 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from urlparse import urlsplit, urlunsplit
 
-TIMELINE_DAYS = 30 
+TIMELINE_DAYS = 30
 TFORMAT = '%Y-%m-%d'
 
 text = {'window': TIMELINE_DAYS}
+limit = datetime.now() - timedelta(days=TIMELINE_DAYS)
+limit_str = limit.strftime(TFORMAT)
 
+def recent_views(pageviews):
+    for pageview in pageviews:
+        day = pageview[0].split('T')[0]
+        if day >= limit_str:
+            yield pageview
 
+            
 def referrers(profiles):
-    
     def domains(pageviews):
         referrers = defaultdict(Counter)
         for pageview in pageviews:
@@ -36,7 +43,8 @@ def referrers(profiles):
     for profile in profiles:
         if '$pageview' not in profile:
             continue
-        for domain, urls in domains(profile['$pageview']).iteritems():
+        pageviews = recent_views(profile['$pageview'])
+        for domain, urls in domains(pageviews).iteritems():
             referrers[domain].update(urls)
     
     yield {'type': 'table',
@@ -48,15 +56,9 @@ def referrers(profiles):
 
         
 def activity(profiles):
-    limit = datetime.now() - timedelta(days=TIMELINE_DAYS)
-    limit_str = limit.strftime(TFORMAT)
-    
     def recent_days(pageviews):
-        for pageview in pageviews:
-            day = pageview[0].split('T')[0]
-            if day >= limit_str:
-                yield day
-    
+        return [pv[0].split('T')[0] for pv in recent_views(pageviews)]
+              
     def timeline(stats):
         for i in range(TIMELINE_DAYS + 1):
             day = (limit + timedelta(days=i)).strftime(TFORMAT)
