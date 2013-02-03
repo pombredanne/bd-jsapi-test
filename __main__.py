@@ -4,6 +4,8 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from urlparse import urlsplit, urlunsplit
 
+set_theme('bank')
+
 TIMELINE_DAYS = 30
 TFORMAT = '%Y-%m-%d'
 
